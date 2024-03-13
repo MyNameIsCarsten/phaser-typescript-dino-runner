@@ -26,6 +26,7 @@ var MainScene = /** @class */ (function (_super) {
         this.load.image('ground', 'assets/ground.png');
     };
     MainScene.prototype.create = function () {
+        var _this = this;
         var _a;
         this.background = this.add.tileSprite(0, 0, 800, 500, 'background').setOrigin(0, 0);
         // plattforms
@@ -43,6 +44,13 @@ var MainScene = /** @class */ (function (_super) {
         this.physics.add.collider(this.dinosaur, this.platforms);
         // cursor
         this.cursors = (_a = this.input.keyboard) === null || _a === void 0 ? void 0 : _a.createCursorKeys();
+        // obstacle
+        this.obstacle = this.physics.add.sprite(700, 300, 'obstacle');
+        this.obstacle.setScale(0.5);
+        this.physics.add.collider(this.obstacle, this.platforms);
+        this.physics.add.collider(this.dinosaur, this.obstacle, function () {
+            _this.scene.restart(); // Restart the scene on collision
+        });
     };
     MainScene.prototype.update = function () {
         var _a, _b;
@@ -50,6 +58,10 @@ var MainScene = /** @class */ (function (_super) {
         if (((_a = this.cursors) === null || _a === void 0 ? void 0 : _a.up.isDown) && ((_b = this.dinosaur) === null || _b === void 0 ? void 0 : _b.body.touching.down)) {
             // Set how high sprite can jump
             this.dinosaur.setVelocityY(-500);
+        }
+        this.obstacle.x -= 5; // Move the obstacle left; adjust speed as needed
+        if (this.obstacle.x < 0) { // Reset obstacle position when it goes off screen
+            this.obstacle.x = 600;
         }
     };
     return MainScene;
