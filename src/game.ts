@@ -9,6 +9,10 @@ export default class MainScene extends Phaser.Scene {
     private background? : Phaser.GameObjects.TileSprite;
     private gameRunning: boolean = false;
     private shouldScheduleNextObstacle: boolean = true;
+    private startTime: number = 0;
+    private timerText?: Phaser.GameObjects.Text;
+    private currentSpeed: number = 0;
+    private speedIncreased: boolean = false;
 
     private scheduleNextObstacle() {
         console.log("Scheduling next obstacle");
@@ -47,30 +51,42 @@ export default class MainScene extends Phaser.Scene {
             this.dinosaur.play('over');
     
             // Optional: display a game over text
-            const gameOverText = this.add.text(400, 250, 'Game Over', { fontSize: '32px', color: '#000' });
+            const gameOverText = this.add.text(400, 250, 'Game Over', { fontSize: '32px', color: '#fff' });
             gameOverText.setOrigin(0.5, 0.5); // Center the text
+
+            // Grey out the scene
+            const overlay = this.add.rectangle(0, 0, 800, 500, 0x000000, 0.01)
+                .setOrigin(0, 0);  // Cover the entire game area
     
-            // Additional game over logic here (e.g., restart button, score display)
-        }
+            // Create restart button text
+            const restartText = this.add.text(400, 300, 'Restart', { fontSize: '24px', color: '#fff' })
+                .setOrigin(0.5, 0.5)
+                .setInteractive({ useHandCursor: true }) // makes the text interactive, so it can respond to pointer events.
+                .on('pointerdown', () => this.scene.restart()) // adds an event listener to restart the scene when the text is clicked
+                .on('pointerover', () => restartText.setStyle({ color: '#fff' })) // Change color on hover
+            }
     }
     
     constructor() {
         super('MainScene');
+        this.currentSpeed = 5; // Initial speed
     }
 
     preload() {
         this.load.image('background', 'assets/background.png');
         this.load.spritesheet('dino', 'assets/dino.png', { 
-            frameWidth: 307, 
-            frameHeight: 271 
+            frameWidth: 330, 
+            frameHeight: 270 
         });
         this.load.image('obstacle', 'assets/obstacle.png');
         this.load.image('ground', 'assets/ground.png');
     }
 
     create() {
+        // Start Game
         this.gameRunning = true;
 
+        // Create background
         this.background = this.add.tileSprite(0, 0, 800, 500, 'background').setOrigin(0, 0);
 
         // plattforms
@@ -123,15 +139,46 @@ export default class MainScene extends Phaser.Scene {
                 this.endGame();
             });
         }
+
+        // Initialize timer
+        this.startTime = Date.now();
+        this.timerText = this.add.text(580, 16, 'Time: 00:00', { fontSize: '30px', color: '#fff' });
     }
 
     update() {
         if (this.gameRunning) {
-            this.background!.tilePositionX += 5;
+            // Calculate elapsed time in seconds
+            const elapsed = Date.now() - this.startTime;
+            const elapsedSeconds = Math.floor(elapsed / 1000);
+
+            // Calculate minutes and seconds
+            const minutes = Math.floor(elapsedSeconds / 60);
+            const seconds = elapsedSeconds % 60;
+
+            // Format minutes and seconds to always display two digits
+            const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Update the timer text
+            this.timerText?.setText(`Time: ${formattedTime}`);
+
+            // Increase speed every 20 seconds
+            if (elapsedSeconds % 10 === 0) {
+                if (!this.speedIncreased && this.currentSpeed < 20) {
+                    this.currentSpeed += 2;
+                    this.speedIncreased = true;
+                }
+            } else {
+                this.speedIncreased = false;
+            }
+
+            // Use currentSpeed for background movement
+            this.background!.tilePositionX += this.currentSpeed;
+            console.log(this.currentSpeed)
         
             // Assuming the game width is 800 pixels
             if (this.obstacle && this.obstacle.x > -50) {  // -50 is just before the obstacle completely goes off-screen
-                this.obstacle.x -= 5;
+                // Use currentSpeed for obstacle movement
+                this.obstacle.x -= this.currentSpeed;
             } else if (this.shouldScheduleNextObstacle) {
                 this.scheduleNextObstacle();
                 this.shouldScheduleNextObstacle = false;
@@ -155,7 +202,7 @@ const config: Phaser.Types.Core.GameConfig = {
     default: 'arcade',
     arcade: {
       gravity: { x: 0, y: 300 },
-      debug: true
+      debug: false
     }
   },
   scene: MainScene
